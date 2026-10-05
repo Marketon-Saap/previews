@@ -10,7 +10,7 @@
       // Marketon Worker orchestrator · single endpoint que crea Contact + Deal
       // en pipeline Marketon + Meta CAPI + GA4 + email notify · docs:
       // Landing/HubSpot-Backend-Credentials-v1.md
-      const MARKETON_ENDPOINT = 'https://apto-landing-api.grupo-plasencia-automotriz.workers.dev/submit';
+      const MARKETON_ENDPOINT = 'https://apto-landing-api.marketon-saap.workers.dev/submit';
       // Fallback directo a HubSpot Forms API si Worker down (degradación grácil)
       const HUBSPOT_PORTAL_ID = '2583031';
       const HUBSPOT_FORM_ID = '696bbd9e-ca44-410c-a474-af764b0e643a';
