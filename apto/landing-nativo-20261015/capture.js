@@ -424,7 +424,7 @@
         }
       }
       function normalizeText(input) { cleanValue(input, true); }
-      form.querySelectorAll('input, textarea, select').forEach(input => {
+      form.querySelectorAll('input:not([type=hidden]), textarea, select').forEach(input => {
         input.addEventListener('input', () => cleanValue(input, false));
         input.addEventListener('blur', () => { normalizeText(input); validateField(input); });
         input.addEventListener('change', () => validateField(input));
@@ -459,7 +459,7 @@
         // Reentrancy guard · previene doble submit (Enter-key rapid presses o dispatch programático)
         if (submitBtn.disabled) return;
 
-        const inputs = form.querySelectorAll('input, textarea, select');
+        const inputs = form.querySelectorAll('input:not([type=hidden]), textarea, select');
         inputs.forEach(normalizeText);
         let allValid = true;
         inputs.forEach(i => { if (!validateField(i)) allValid = false; });
