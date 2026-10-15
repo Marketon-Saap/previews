@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0A1A3B"/>
+      <stop offset="100%" stop-color="#0F2350"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2E6BFF"/>
+      <stop offset="100%" stop-color="#60A5FA"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="80" y="80" width="80" height="4" fill="url(#accent)" rx="2"/>
+  <text x="80" y="200" font-family="Inter, sans-serif" font-size="72" font-weight="700" fill="#FFFFFF" letter-spacing="-2">APTO</text>
+  <text x="80" y="320" font-family="Inter, sans-serif" font-size="44" font-weight="600" fill="#FFFFFF" letter-spacing="-1">
+    <tspan x="80" dy="0">Diseñamos y construimos los sistemas</tspan>
+    <tspan x="80" dy="56">críticos que tu operación necesita</tspan>
+    <tspan x="80" dy="56">para escalar.</tspan>
+  </text>
+  <text x="80" y="560" font-family="Inter, sans-serif" font-size="24" font-weight="500" fill="#94A3B8">
+    Estrategia + implementación handson · apto.mx
+  </text>
+</svg>
