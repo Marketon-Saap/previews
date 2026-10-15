@@ -511,7 +511,8 @@
 <div class="cta-close__form" id="form-inline-host">
 <div class="form-card" id="form-card">
 <div aria-live="assertive" class="form-message" hidden="" id="form-message" role="alert"></div><p class="preview-note">Página de revisión: el formulario valida pero no envía datos.</p>
-<form id="diagnostico-form" novalidate="" autocomplete="on" data-mode="review" method="post" action="https://09b4da5c-apto-landing-api.marketon-saap.workers.dev/submit">
+<form id="diagnostico-form" novalidate="" autocomplete="on" data-mode="review" method="post" action="https://378956dc-apto-landing-api.marketon-saap.workers.dev/submit">
+<input type="hidden" name="page_uri" id="f-page_uri" value=""/>
 <div class="form-field">
 <label for="f-firstname">Nombre <span class="req">*</span></label>
 <input aria-describedby="err-firstname" autocomplete="given-name" id="f-firstname" minlength="2" name="firstname" placeholder="Tu nombre" required="" type="text"/>
@@ -746,4 +747,4 @@
 </div>
 </div>
 </footer><div class="sticky-cta-mobile" aria-hidden="false"><a href="#cta-form" class="btn sticky-cta-mobile__btn" data-track="sticky_cta_click">Cuéntanos tu reto <span aria-hidden="true">→</span></a></div>
-<script src="script.js?v=20260922a"></script><script src="capture.js?v=20261015a"></script></body></html>
+<script>/* URL de la pagina para el envio nativo (sin capture.js): el Referer entre dominios llega recortado y se perdian los UTM · 15-oct-2026 */try{var pu=document.getElementById("f-page_uri");if(pu)pu.value=location.href;}catch(e){}</script><script src="script.js?v=20260922a"></script><script src="capture.js?v=20261015a"></script></body></html>
