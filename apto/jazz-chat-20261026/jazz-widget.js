@@ -22,7 +22,7 @@
   var CFG = window.JAZZ_CHAT || {};
   var API = String(CFG.api || 'https://apto-chat-api.marketon-saap.workers.dev').replace(/\/+$/, '');
   var NAME = CFG.name || 'Jazz';
-  var VERSION = '0.1.0';
+  var VERSION = '0.2.0';
   var PRIVACY_URL = 'https://apto.mx/aviso-de-privacidad';
   var MAX_HISTORY = 14;
   var MOBILE = function () { return window.matchMedia && window.matchMedia('(max-width: 780px)').matches; };
@@ -130,7 +130,7 @@
   var history = [];           // [{role, content}] lo que ve Jazz
   var lead = { firstname: '', email: '', company: '', phone: '' };
   var busy = false, opened = false, greeted = false, turns = 0, openedAt = 0, openCount = 0;
-  var mode = '', modeNoticed = false, leadSent = false, leadCard = null, lastAction = '', firstFreeText = '';
+  var mode = '', brain = '', modeNoticed = false, leadSent = false, watchingForm = false, botChallenge = '', leadCard = null, lastAction = '', firstFreeText = '';
   var canStream = typeof window.ReadableStream !== 'undefined' && typeof window.TextDecoder !== 'undefined' && typeof Response !== 'undefined' && ('body' in Response.prototype);
   var sid = (function () {
     var make = function () { return 'w' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); };
@@ -145,7 +145,7 @@
   function track(ev, extra) {
     try {
       window.dataLayer = window.dataLayer || [];
-      var p = { event: ev, jazz_session: sid, jazz_turns: turns, jazz_open_count: openCount, jazz_mode: mode || 'unknown', jazz_action: lastAction || '', jazz_version: VERSION };
+      var p = { event: ev, jazz_session: sid, jazz_turns: turns, jazz_open_count: openCount, jazz_mode: mode || 'unknown', jazz_brain: brain || 'unknown', jazz_action: lastAction || '', jazz_version: VERSION };
       var k; for (k in (extra || {})) if (Object.prototype.hasOwnProperty.call(extra, k)) p[k] = extra[k];
       window.dataLayer.push(p);
     } catch (e) {}
@@ -245,7 +245,7 @@
     var t0 = Date.now();
     track('jazz_message', { jazz_message_len: text.length, jazz_turn: turns });
     var topic = topicOf(text);
-    var body = { session_id: sid, messages: history.slice(-MAX_HISTORY), stream: canStream, page: { pageUri: location.href.slice(0, 2000), pageName: document.title.slice(0, 200) } };
+    var body = { session_id: sid, messages: history.slice(-MAX_HISTORY), stream: canStream, lead_sent: leadSent, page: { pageUri: location.href.slice(0, 2000), pageName: document.title.slice(0, 200) } };
     var attempt = 0, lastErr = '', rendered = false;
 
     function request() {
@@ -260,7 +260,7 @@
           }
           var ct = r.headers.get('Content-Type') || '';
           if (ct.indexOf('text/event-stream') < 0 || !canStream) {
-            return r.json().then(function (j) { finish(clean(j.reply || ''), j.suggestions || [], j.mode); });
+            return r.json().then(function (j) { if (j.brain) brain = j.brain; if (j.topic) topic = j.topic; finish(clean(j.reply || ''), j.suggestions || [], j.mode); if (j.lead && typeof j.lead === 'object' && !leadSent) openPrefilledForm(j.lead); });
           }
           return readStream(r);
         })
@@ -273,13 +273,13 @@
     function readStream(r) {
       var reader = r.body.getReader(), dec = new TextDecoder(), buf = '', el = null, full = '', done = false;
       function handle(obj) {
-        if (obj.meta) { setMode(obj.meta.mode); }
+        if (obj.meta) { setMode(obj.meta.mode); if (obj.meta.brain) brain = obj.meta.brain; }
         if (typeof obj.delta === 'string' && obj.delta) {
           if (!el) { typing(false); el = addMsg('bot', ''); rendered = true; }
           full += obj.delta; el.textContent = clean(full); scrollBottom();
         }
         if (obj.error) { lastErr = String(obj.error); throw new Error(lastErr); }
-        if (obj.done) { done = true; finish(clean(full), obj.suggestions || [], mode, el); }
+        if (obj.done) { done = true; if (obj.topic) topic = obj.topic; finish(clean(full), obj.suggestions || [], mode, el); if (obj.lead && typeof obj.lead === 'object' && !leadSent) openPrefilledForm(obj.lead); }
       }
       function pump() {
         return reader.read().then(function (c) {
@@ -350,7 +350,7 @@
     set('f-company', lead.company);
     var digits = lead.phone.replace(/\D/g, ''); if (digits.length >= 12 && digits.indexOf('52') === 0) digits = digits.slice(2);
     if (digits.length === 10) set('f-phone_number', digits);
-    var m = firstUserMessage(); if (m && m.length >= 10) set('f-message', m.slice(0, 500));
+    var m = botChallenge || firstUserMessage(); if (m && m.length >= 10) set('f-message', m.slice(0, 500));
   }
   function openLandingForm(from) {
     lastAction = 'humano';
@@ -361,6 +361,47 @@
     if (opener && hasHandler) opener.click(); else location.hash = '#cta-form';
     setTimeout(prefillForm, 380);
     showToast('Abrimos el formulario con lo que ya nos contaste');
+  }
+  // El cerebro captó nombre, correo y empresa en la conversación (marcador [[lead: …]] que el Worker convierte en
+  // lead:{…}): se guarda y se abre el formulario de la landing prellenado. El prospecto entra por el formulario, nunca
+  // lo registra el chat (decisión de Chucho, 26-oct).
+  function openPrefilledForm(d) {
+    var name = ((d.firstname || '') + ' ' + (d.lastname || '')).replace(/\s+/g, ' ').trim();
+    if (name) lead.firstname = name;
+    if (d.email) lead.email = String(d.email);
+    if (d.company) lead.company = String(d.company);
+    if (d.message) botChallenge = String(d.message).slice(0, 500);
+    track('jazz_action', { jazz_action: 'lead_prefill' });
+    watchFormSent();
+    setTimeout(function () { openLandingForm('bot'); }, 900);
+  }
+  // Detecta el envío real del formulario (capture.js manda form_submit_success al dataLayer) para avisarle al Worker
+  // con lead_sent y que el cerebro no vuelva a pedir datos. Se instala solo cuando hace falta, con GTM ya cargado.
+  function watchFormSent() {
+    if (watchingForm) return;
+    watchingForm = true;
+    try {
+      var dl = window.dataLayer = window.dataLayer || [];
+      var orig = dl.push;
+      dl.push = function () {
+        try {
+          for (var i = 0; i < arguments.length; i++) {
+            var a = arguments[i];
+            if (a && typeof a === 'object' && /^form_submit_success/.test(String(a.event || ''))) onFormSent();
+          }
+        } catch (e) {}
+        return orig.apply(dl, arguments);
+      };
+    } catch (e) {}
+  }
+  function onFormSent() {
+    if (leadSent) return;
+    leadSent = true;
+    lastAction = 'form_sent';
+    track('jazz_action', { jazz_action: 'form_sent' });
+    var reply = 'Gracias, ya recibimos tu formulario. Alguien de APTO te escribe. Mientras tanto, ¿te cuento algo más de cómo trabajamos?';
+    addMsg('bot', reply); history.push({ role: 'assistant', content: reply });
+    setChips(['¿Cómo trabajan?', 'Ver casos de éxito']);
   }
 
   /* ── tarjeta de datos dentro del chat → POST /lead ── */
