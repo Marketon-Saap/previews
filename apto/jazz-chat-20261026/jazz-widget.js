@@ -354,8 +354,13 @@
     var want = n(v), i;
     for (i = 0; i < el.options.length; i++) {
       var o = el.options[i];
-      if (o.value && (n(o.value) === want || n(o.textContent) === want || n(o.textContent).indexOf(want) === 0)) { el.value = o.value; try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {} return; }
+      if (o.value && (n(o.value) === want || n(o.textContent) === want || n(o.textContent).indexOf(want) === 0 || (want.length >= 5 && n(o.textContent).indexOf(want) >= 0))) { el.value = o.value; try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {} return; }
     }
+  }
+  function setField(id, v) {
+    var el = byId(id); if (!el || !v) return;
+    if (el.tagName === 'SELECT') { setSelect(id, v); return; }
+    if (!el.value) { el.value = v; try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {} }
   }
   function prefillForm() {
     readLeadFromCard();
@@ -365,7 +370,7 @@
     if (lead.lastname) set('f-lastname', lead.lastname);
     set('f-email', lead.email.toLowerCase());
     set('f-company', lead.company);
-    set('f-jobtitle', lead.jobtitle);
+    setField('f-jobtitle', lead.jobtitle); // hoy es texto libre; si algún día es un select, se elige la opción más cercana
     setSelect('f-industry', lead.industry);
     setSelect('f-company_size', lead.company_size);
     var digits = lead.phone.replace(/\D/g, ''); if (digits.length >= 12 && digits.indexOf('52') === 0) digits = digits.slice(2);
