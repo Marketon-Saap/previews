@@ -128,7 +128,7 @@
 
   /* ── estado ── */
   var history = [];           // [{role, content}] lo que ve Jazz
-  var lead = { firstname: '', email: '', company: '', phone: '' };
+  var lead = { firstname: '', lastname: '', email: '', company: '', phone: '', jobtitle: '', industry: '', company_size: '' };
   var busy = false, opened = false, greeted = false, turns = 0, openedAt = 0, openCount = 0;
   var mode = '', brain = '', modeNoticed = false, leadSent = false, watchingForm = false, botChallenge = '', leadCard = null, lastAction = '', firstFreeText = '';
   var canStream = typeof window.ReadableStream !== 'undefined' && typeof window.TextDecoder !== 'undefined' && typeof Response !== 'undefined' && ('body' in Response.prototype);
@@ -341,13 +341,26 @@
     var g = function (n) { var el = leadCard.querySelector('[name="' + n + '"]'); return el ? el.value.trim() : ''; };
     lead.firstname = g('firstname') || lead.firstname; lead.email = g('email') || lead.email; lead.company = g('company') || lead.company; lead.phone = g('phone') || lead.phone;
   }
+  function setSelect(id, v) {
+    var el = byId(id); if (!el || !v || el.value) return;
+    var n = function (x) { return String(x).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9+]/g, ''); };
+    var want = n(v), i;
+    for (i = 0; i < el.options.length; i++) {
+      var o = el.options[i];
+      if (o.value && (n(o.value) === want || n(o.textContent) === want || n(o.textContent).indexOf(want) === 0)) { el.value = o.value; try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {} return; }
+    }
+  }
   function prefillForm() {
     readLeadFromCard();
     var set = function (id, v) { var el = byId(id); if (el && !el.value && v) { el.value = v; try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {} } };
     var parts = lead.firstname.split(/\s+/).filter(Boolean);
-    if (parts.length) { set('f-firstname', parts[0]); if (parts.length > 1) set('f-lastname', parts.slice(1).join(' ')); }
+    if (parts.length) { set('f-firstname', parts[0]); if (parts.length > 1 && !lead.lastname) set('f-lastname', parts.slice(1).join(' ')); }
+    if (lead.lastname) set('f-lastname', lead.lastname);
     set('f-email', lead.email.toLowerCase());
     set('f-company', lead.company);
+    set('f-jobtitle', lead.jobtitle);
+    setSelect('f-industry', lead.industry);
+    setSelect('f-company_size', lead.company_size);
     var digits = lead.phone.replace(/\D/g, ''); if (digits.length >= 12 && digits.indexOf('52') === 0) digits = digits.slice(2);
     if (digits.length === 10) set('f-phone_number', digits);
     var m = botChallenge || firstUserMessage(); if (m && m.length >= 10) set('f-message', m.slice(0, 500));
@@ -366,10 +379,14 @@
   // lead:{…}): se guarda y se abre el formulario de la landing prellenado. El prospecto entra por el formulario, nunca
   // lo registra el chat (decisión de Chucho, 26-oct).
   function openPrefilledForm(d) {
-    var name = ((d.firstname || '') + ' ' + (d.lastname || '')).replace(/\s+/g, ' ').trim();
-    if (name) lead.firstname = name;
+    if (d.firstname) lead.firstname = String(d.firstname);
+    if (d.lastname) lead.lastname = String(d.lastname);
     if (d.email) lead.email = String(d.email);
     if (d.company) lead.company = String(d.company);
+    if (d.phone) lead.phone = String(d.phone);
+    if (d.jobtitle) lead.jobtitle = String(d.jobtitle);
+    if (d.industry) lead.industry = String(d.industry);
+    if (d.company_size) lead.company_size = String(d.company_size);
     if (d.message) botChallenge = String(d.message).slice(0, 500);
     track('jazz_action', { jazz_action: 'lead_prefill' });
     watchFormSent();
