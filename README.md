@@ -5,6 +5,7 @@ Páginas de revisión y pruebas para clientes. Sin medición (sin GTM ni HubSpot
 | Cliente | Página | URL |
 |---|---|---|
 | APTO | Landing v2 · propuesta de relevancia para Ads (22-sep-2026) | https://marketon-previews.pages.dev/apto/landing-v2-propuesta/ (Cloudflare, Marketon-SaaP) · espejo: https://marketon-saap.github.io/previews/apto/landing-v2-propuesta/ |
+| APTO | Landing con el chat de Jazz en modo prueba (Worker `apto-chat-api` con respuestas simuladas; formulario en revisión, no envía) (26-oct-2026) | https://marketon-previews.pages.dev/apto/jazz-chat-20261026/ · espejo: https://marketon-saap.github.io/previews/apto/jazz-chat-20261026/ |
 
 ## Cómo publicar
 
