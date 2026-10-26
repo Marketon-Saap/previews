@@ -556,8 +556,14 @@
         if (attribution) context.attribution = attribution;
         updateScroll();
         var cl = clarityIds();
+        // Canal del lead (26-oct-2026): 'chat' si el formulario lo abrió el chat de la landing (jazz-widget.js deja
+        // window.APTO_CHAT_LEAD = { channel: 'chat', session_id }), 'landing_page' en cualquier otro caso. Va igual al
+        // Worker (context.meta) y al dataLayer (form_submit_success) para que HubSpot y GA4 digan lo mismo.
+        var chatLead = (window.APTO_CHAT_LEAD && window.APTO_CHAT_LEAD.channel === 'chat') ? window.APTO_CHAT_LEAD : null;
         context.meta = {
           form_origin_cta: formOriginCta,
+          lead_channel: chatLead ? 'chat' : 'landing_page',
+          chat_session_id: chatLead ? String(chatLead.session_id || '').slice(0, 64) : '',
           time_on_page_s: Math.round((window.performance && performance.now ? performance.now() : 0) / 1000),
           scroll_depth_pct: maxScrollPct,
           form_error_count: formErrorCount,
@@ -651,6 +657,9 @@
             creative_id: ((attribution && (attribution.last || attribution.first)) || {}).creative_id || '',
             ad_network: ((attribution && (attribution.last || attribution.first)) || {}).network || '',
             attribution_touch: attrNow ? 'url' : (attribution ? 'stored' : 'none'),
+            // Canal (chat | landing_page) y sesión del chat si aplica · 26-oct-2026
+            lead_channel: context.meta.lead_channel,
+            chat_session_id: context.meta.chat_session_id,
             // Intención
             form_origin_cta: context.meta.form_origin_cta,
             time_on_page_s: context.meta.time_on_page_s,
@@ -727,7 +736,7 @@
               body: JSON.stringify(fallbackPayload)
             });
             if (!res2.ok) throw new Error('Fallback también falló');
-            track('form_submit_success_fallback', { has_problem_desc: !!workerPayload.message });
+            track('form_submit_success_fallback', { has_problem_desc: !!workerPayload.message, lead_channel: context.meta.lead_channel, chat_session_id: context.meta.chat_session_id });
             form.hidden = true;
             successView.hidden = false;
             revealSuccess(successView);

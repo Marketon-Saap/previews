@@ -10,7 +10,7 @@
    "Hablar con alguien" abre el formulario de la landing prellenado con lo que el chat ya sabe;
    "Dejar mis datos" muestra una tarjeta en el chat y manda el prospecto a /lead (mismo contrato
    que el formulario; el Worker del formulario hace HubSpot, GA4, CAPI y correo).
-   Eventos al dataLayer: jazz_open, jazz_close, jazz_message, jazz_reply, jazz_action, jazz_error
+   Eventos al dataLayer: chat_open, chat_start, chat_message, chat_reply, chat_lead_prefill, chat_error, chat_close, chat_action
    y generate_lead_client (mismos parámetros que form_submit_success del formulario).
    Sin encadenamiento opcional ni sintaxis posterior a ES2017: capture.js ya se rompió en un
    Android viejo por eso (15-oct-2026). */
@@ -119,7 +119,7 @@
     + '<div class="jz-foot">' + esc(NAME) + ' es el asistente de IA de APTO. Lo que escribas puede guardarse para mejorar el servicio · <a href="' + PRIVACY_URL + '" target="_blank" rel="noopener">Aviso de privacidad</a></div>'
     + '</div>'
     + '<div class="jz-toast" id="jzToast" role="status" aria-live="polite"></div>'
-    + '<button type="button" id="jzFormOpener" data-open-form-modal data-track="jazz_chat_cta" hidden tabindex="-1" aria-hidden="true">Cuéntanos tu reto</button>';
+    + '<button type="button" id="jzFormOpener" data-open-form-modal data-track="chat" hidden tabindex="-1" aria-hidden="true">Cuéntanos tu reto</button>';
   document.body.appendChild(root);
 
   var fab = byId('jzFab'), panel = byId('jzPanel'), closeBtn = byId('jzClose');
@@ -142,11 +142,16 @@
   })();
 
   /* ── medición ── */
+  // Eventos al dataLayer (contrato en el README del Worker): chat_open, chat_start, chat_message, chat_reply,
+  // chat_lead_prefill, chat_error, chat_close, chat_action. Todos llevan chat_session_id, chat_turn, chat_brain,
+  // chat_mode, chat_open_count y chat_widget_version. Sin PII. Con JAZZ_CHAT.debug o ?chat_debug=1 se ven en consola.
+  var DEBUG = !!CFG.debug || /[?&]chat_debug=1/.test(location.search);
   function track(ev, extra) {
     try {
       window.dataLayer = window.dataLayer || [];
-      var p = { event: ev, jazz_session: sid, jazz_turns: turns, jazz_open_count: openCount, jazz_mode: mode || 'unknown', jazz_brain: brain || 'unknown', jazz_action: lastAction || '', jazz_version: VERSION };
+      var p = { event: ev, chat_session_id: sid, chat_turn: turns, chat_open_count: openCount, chat_mode: mode || 'unknown', chat_brain: brain || 'unknown', chat_widget_version: VERSION };
       var k; for (k in (extra || {})) if (Object.prototype.hasOwnProperty.call(extra, k)) p[k] = extra[k];
+      if (DEBUG && window.console) console.log('[chat] dataLayer', ev, p);
       window.dataLayer.push(p);
     } catch (e) {}
   }
@@ -200,13 +205,13 @@
     if (/ver en la página/i.test(text)) { goToSection(topic); return; }
     if (/seguir preguntando/i.test(text)) { setChips(['¿Qué servicios ofrecen?', '¿Cómo trabajan?', 'Ver casos de éxito']); input.focus({ preventScroll: true }); return; }
     var t = topicOf(text);
-    if (t) { lastAction = t; track('jazz_action', { jazz_action: t, jazz_label: text }); }
+    if (t) { lastAction = t; track('chat_action', { chat_action: t, chat_label: text }); }
     send(text, true);
   }
   function goToSection(topic) {
     var sel = SECTION_FOR[topic]; var el = sel && document.querySelector(sel);
     lastAction = 'section';
-    track('jazz_action', { jazz_action: 'section', jazz_target: sel || '' });
+    track('chat_action', { chat_action: 'section', chat_target: sel || '' });
     if (!el) return;
     if (MOBILE()) close();
     try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { el.scrollIntoView(); }
@@ -222,12 +227,12 @@
       setChips(['¿Qué servicios ofrecen?', '¿Cómo trabajan?', 'Ver casos de éxito']);
     }
     openCount++; openedAt = Date.now();
-    track('jazz_open', {});
+    track('chat_open', {});
     setTimeout(function () { if (!MOBILE()) input.focus({ preventScroll: true }); }, 250);
   }
   function close() {
     if (!opened) return;
-    track('jazz_close', { jazz_duration_s: openedAt ? Math.round((Date.now() - openedAt) / 1000) : 0 });
+    track('chat_close', { chat_duration_s: openedAt ? Math.round((Date.now() - openedAt) / 1000) : 0 });
     opened = false; panel.classList.remove('is-open'); panel.setAttribute('aria-hidden', 'true'); fab.setAttribute('aria-expanded', 'false');
     document.body.classList.remove('jz-open'); fab.focus({ preventScroll: true });
   }
@@ -243,9 +248,11 @@
     input.value = ''; input.style.height = ''; setChips([]); setBusy(true); typing(true);
     turns++;
     var t0 = Date.now();
-    track('jazz_message', { jazz_message_len: text.length, jazz_turn: turns });
+    if (turns === 1) track('chat_start', {});
+    track('chat_message', { chat_message_len: text.length, chat_from: fromChip ? 'chip' : 'typed' });
     var topic = topicOf(text);
-    var body = { session_id: sid, messages: history.slice(-MAX_HISTORY), stream: canStream, lead_sent: leadSent, page: { pageUri: location.href.slice(0, 2000), pageName: document.title.slice(0, 200) } };
+    var attrAll = attribution(); var attrOne = attrAll ? (attrAll.last || attrAll.first) : null;
+    var body = { session_id: sid, messages: history.slice(-MAX_HISTORY), stream: canStream, lead_sent: leadSent, attr: attrOne || undefined, page: { pageUri: location.href.slice(0, 2000), pageName: document.title.slice(0, 200) } };
     var attempt = 0, lastErr = '', rendered = false;
 
     function request() {
@@ -307,13 +314,13 @@
       rendered = true;
       history.push({ role: 'assistant', content: reply });
       if (m) setMode(m);
-      track('jazz_reply', { jazz_reply_len: reply.length, jazz_ms: Date.now() - t0 });
+      track('chat_reply', { chat_reply_len: reply.length, chat_latency_ms: Date.now() - t0 });
       setChips(suggestions, topic);
     }
     request()
       .catch(function () {
         typing(false);
-        track('jazz_error', { jazz_error: lastErr || 'unknown', jazz_api: API, jazz_online: navigator.onLine ? 'true' : 'false' });
+        track('chat_error', { chat_error: lastErr || 'unknown', chat_online: navigator.onLine ? 'true' : 'false' });
         var el = document.createElement('div'); el.className = 'jz-msg is-bot';
         if (/http_429/.test(lastErr)) el.textContent = 'Vas muy rápido. Espera un momento e intenta de nuevo.';
         else el.innerHTML = 'No pude conectar ahora mismo. Intenta de nuevo o escríbenos a <a href="mailto:info@apto.mx">info@apto.mx</a>.';
@@ -367,7 +374,10 @@
   }
   function openLandingForm(from) {
     lastAction = 'humano';
-    track('jazz_action', { jazz_action: 'humano', jazz_from: from || '' });
+    track('chat_action', { chat_action: 'humano', chat_from: from || '' });
+    // Cualquier formulario abierto desde el chat es canal 'chat': capture.js lo lee para lead_channel y chat_session_id.
+    window.APTO_CHAT_LEAD = { channel: 'chat', session_id: sid, opened_at: Date.now() };
+    watchFormSent();
     close();
     var opener = byId('jzFormOpener');
     var hasHandler = !!document.getElementById('form-modal');
@@ -388,8 +398,8 @@
     if (d.industry) lead.industry = String(d.industry);
     if (d.company_size) lead.company_size = String(d.company_size);
     if (d.message) botChallenge = String(d.message).slice(0, 500);
-    track('jazz_action', { jazz_action: 'lead_prefill' });
-    watchFormSent();
+    var fields = []; var fk; for (fk in d) if (Object.prototype.hasOwnProperty.call(d, fk) && d[fk]) fields.push(fk);
+    track('chat_lead_prefill', { chat_prefilled_fields: fields.join(',') });
     setTimeout(function () { openLandingForm('bot'); }, 900);
   }
   // Detecta el envío real del formulario (capture.js manda form_submit_success al dataLayer) para avisarle al Worker
@@ -404,18 +414,25 @@
         try {
           for (var i = 0; i < arguments.length; i++) {
             var a = arguments[i];
-            if (a && typeof a === 'object' && /^form_submit_success/.test(String(a.event || ''))) onFormSent();
+            if (a && typeof a === 'object' && /^form_submit_success/.test(String(a.event || ''))) {
+              if (!a.lead_channel) { a.lead_channel = 'chat'; a.chat_session_id = sid; } // capture.js anterior al 26-oct
+              onFormSent(a);
+            }
           }
         } catch (e) {}
         return orig.apply(dl, arguments);
       };
     } catch (e) {}
   }
-  function onFormSent() {
+  function onFormSent(a) {
     if (leadSent) return;
     leadSent = true;
     lastAction = 'form_sent';
-    track('jazz_action', { jazz_action: 'form_sent' });
+    try {
+      fetch(API + '/event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
+        body: JSON.stringify({ session_id: sid, type: 'lead_submitted', contact_id: (a && a.contact_id) ? String(a.contact_id) : '', deal_id: (a && a.deal_id) ? String(a.deal_id) : '' }) }).catch(function () {});
+    } catch (e) {}
+    track('chat_action', { chat_action: 'form_sent' });
     var reply = 'Gracias, ya recibimos tu formulario. Alguien de APTO te escribe. Mientras tanto, ¿te cuento algo más de cómo trabajamos?';
     addMsg('bot', reply); history.push({ role: 'assistant', content: reply });
     setChips(['¿Cómo trabajan?', 'Ver casos de éxito']);
@@ -427,7 +444,7 @@
   }
   function showLeadCard(from) {
     lastAction = 'lead_card';
-    track('jazz_action', { jazz_action: 'lead_card', jazz_from: from || '' });
+    track('chat_action', { chat_action: 'lead_card', chat_from: from || '' });
     if (leadCard) { leadCard.scrollIntoView({ block: 'nearest' }); var f = leadCard.querySelector('input'); if (f) f.focus({ preventScroll: true }); return; }
     setChips([]);
     var el = document.createElement('div'); el.className = 'jz-lead';
@@ -499,7 +516,8 @@
         if (!j.ok) { throw new Error(j.error || ('http_' + j.__status)); }
         leadSent = true;
         var a = (attr && (attr.last || attr.first)) || {};
-        track('generate_lead_client', {
+        track('form_submit_success', {
+          lead_channel: 'chat', chat_session_id: sid, lead_source: 'chat_card',
           event_id: eventId,
           em_raw: payload.email, ph_raw: payload.phone || '', fn_raw: payload.firstname, ln_raw: '',
           company: payload.company, jobtitle: '', industry: '', company_size: '', country: 'MX',
@@ -507,13 +525,13 @@
           privacy_consent: true, privacy_consent_ts: new Date().toISOString(),
           campaign_id: a.campaign_id || '', ad_group_id: a.adgroup_id || '', keyword: a.keyword || '', match_type: a.match_type || '', creative_id: a.creative_id || '', ad_network: a.network || '',
           attribution_touch: attr ? 'stored' : 'none',
-          form_origin_cta: 'jazz_chat', time_on_page_s: context.meta.time_on_page_s, scroll_depth_pct: context.meta.scroll_depth_pct, form_error_count: 0,
+          form_origin_cta: 'chat', time_on_page_s: context.meta.time_on_page_s, scroll_depth_pct: context.meta.scroll_depth_pct, form_error_count: 0,
           gclid: '', fbclid: '', fbp: context.fbp || '', fbc: context.fbc || '', ga_client_id: context.client_id || '', hutk: context.hutk || '',
           contact_id: j.contactId || '', deal_id: j.dealId || '', lead_id: j.leadId || '',
-          lead_source: 'jazz_chat', lead_mock: j.mock ? 'true' : 'false',
+          lead_mock: j.mock ? 'true' : 'false',
           value: 500, currency: 'MXN', page_url: location.href, page_referrer: document.referrer
         });
-        track('jazz_action', { jazz_action: 'lead_sent' });
+        track('chat_action', { chat_action: 'lead_sent' });
         var btns = el.querySelector('.jz-lead-btns'); if (btns) btns.parentNode.removeChild(btns);
         el.querySelectorAll('input').forEach(function (i) { i.disabled = true; });
         var ok = document.createElement('p'); ok.className = 'jz-lead-s'; ok.style.marginTop = '10px';
@@ -525,7 +543,7 @@
       })
       .catch(function (e) {
         var code = String(e && e.message || e).slice(0, 60);
-        track('jazz_error', { jazz_error: 'lead_' + code, jazz_api: API });
+        track('chat_error', { chat_error: 'lead_' + code, chat_online: navigator.onLine ? 'true' : 'false' });
         btn.disabled = false; btn.textContent = 'Enviar';
         var err = el.querySelector('.jz-err[data-for="privacy_consent"]');
         err.textContent = /rate_limited|429/.test(code) ? 'Espera un momento e intenta de nuevo.' : 'No pudimos enviar tus datos. Intenta de nuevo o usa el formulario completo.';
