@@ -1,4 +1,4 @@
-/* APTO · Jazz · widget de chat para la landing (Marketon) · v0.1 · 2026-10-26
+/* APTO · Jazz · widget de chat para la landing (Marketon) · v0.2.1 · 2026-10-26 (en producción en landing.apto.mx desde el 26-oct-2026)
    Parte del bloque de Plasi (Marketon/infra/plasi) adaptado al look de landing.apto.mx.
 
    Uso: antes de </body>
@@ -22,8 +22,8 @@
   var CFG = window.JAZZ_CHAT || {};
   var API = String(CFG.api || 'https://apto-chat-api.marketon-saap.workers.dev').replace(/\/+$/, '');
   var NAME = CFG.name || 'Jazz';
-  var VERSION = '0.2.0';
-  var PRIVACY_URL = 'https://apto.mx/aviso-de-privacidad';
+  var VERSION = '0.2.1';
+  var PRIVACY_URL = CFG.privacy || 'https://landing.apto.mx/aviso-de-privacidad/'; // aviso de la landing (previews lo carga desde su copia)
   var MAX_HISTORY = 14;
   var MOBILE = function () { return window.matchMedia && window.matchMedia('(max-width: 780px)').matches; };
 
