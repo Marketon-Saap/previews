@@ -7,7 +7,8 @@
      <script src="/js/asistente-transcargo.js" defer></script>
 
    Opciones de window.TRANSCARGO_CHAT: api (obligatoria), whatsapp (dígitos con 52), name, privacy (URL del aviso),
-   cta y ctaSub (las dos líneas del botón flotante), greeting (saludo), debug (imprime los eventos del dataLayer en consola; también con ?chat_debug=1).
+   cta y ctaSub (las dos líneas del botón flotante), bottom (separación desde abajo, por defecto 92px para no
+   encimarse con el botón de WhatsApp del sitio), greeting (saludo), debug (imprime los eventos del dataLayer en consola; también con ?chat_debug=1).
 
    Backend: POST {api}/chat (SSE propio: data:{meta|delta|done|error}) y POST {api}/event ({type:"action", action}).
    Eventos al dataLayer: chat_open, chat_start, chat_message, chat_reply, chat_action, chat_error, chat_close
@@ -20,9 +21,10 @@
   var CFG = window.TRANSCARGO_CHAT || {};
   var API = String(CFG.api || '').replace(/\/+$/, '');
   var NAME = CFG.name || 'Asistente de Transcargo';
-  var VERSION = '0.1.1';
+  var VERSION = '0.1.2';
   var WA = String(CFG.whatsapp || '5213121216310').replace(/\D/g, '');
   var PRIVACY_URL = CFG.privacy || '/uso-de-informacion/';
+  var BOTTOM = CFG.bottom || '92px';   // el sitio tiene su botón de WhatsApp abajo a la derecha: el chat va encima
   var CTA = CFG.cta || '\u00bfTienes dudas?';
   var CTA_SUB = CFG.ctaSub || 'Preg\u00fantale a nuestro asesor de IA';
   var GREETING = CFG.greeting || 'Hola, soy el asistente de Transcargo. Te explico cómo funciona el seguro de mercancía y te llevo a cotizar tu embarque. ¿Qué mercancía mueves?';
@@ -34,15 +36,15 @@
   /* ── estilos: tokens del sitio de Transcargo con respaldo ── */
   var css = ''
     + '#tcChatRoot{--tc-deep:#1D0C44;--tc-purple:#451DA1;--tc-lilac:#EEEBF7;--tc-line:#C2C1E3;--tc-ink:#212121;--tc-soft:#676767;--tc-paper:#fff;--tc-paper-2:#F5F6F6;--tc-z:60;--tc-sans:Manrope,system-ui,sans-serif;--tc-text:Inter,system-ui,sans-serif;font-family:var(--tc-sans);color:var(--tc-ink)}'
-    + '.tc-fab{position:fixed;right:18px;bottom:18px;z-index:var(--tc-z);display:inline-flex;align-items:center;gap:12px;min-height:56px;padding:0 20px 0 8px;border:0;border-radius:999px;background:var(--tc-deep);color:#fff;font:600 15px/1.2 var(--tc-sans);cursor:pointer;box-shadow:0 14px 32px -10px rgba(29,12,68,.55);transition:transform .2s ease,background .2s;text-align:left}'
+    + '.tc-fab{position:fixed;right:18px;bottom:var(--tc-bottom,92px);z-index:var(--tc-z);display:inline-flex;align-items:center;gap:12px;min-height:56px;padding:0 20px 0 8px;border:0;border-radius:999px;background:var(--tc-deep);color:#fff;font:600 15px/1.2 var(--tc-sans);cursor:pointer;box-shadow:0 14px 32px -10px rgba(29,12,68,.55);transition:transform .2s ease,background .2s;text-align:left}'
     + '.tc-fab:hover{background:var(--tc-purple);transform:translateY(-2px);color:#fff}'
     + '.tc-fab:focus-visible{outline:3px solid var(--tc-purple);outline-offset:4px}'
     + '.tc-avatar{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--tc-purple);color:#fff;font-weight:700;font-size:13px;letter-spacing:.04em;flex:0 0 40px}'
     + '.tc-fab-txt{display:flex;flex-direction:column}'
     + '.tc-fab small{display:block;font-weight:400;font-size:12px;opacity:.75;margin-top:3px}'
     + 'body.tc-open .tc-fab{display:none}'
-    + '@media (max-width:780px){.tc-fab{right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));min-height:52px;padding-right:16px}.tc-fab small{display:none}}'
-    + '.tc-panel{position:fixed;right:18px;bottom:18px;z-index:calc(var(--tc-z) + 1);width:min(400px,calc(100vw - 36px));height:min(680px,calc(100vh - 36px));height:min(680px,calc(100dvh - 36px));display:none;flex-direction:column;background:var(--tc-paper);border-radius:24px;box-shadow:0 32px 64px -16px rgba(29,12,68,.4),0 0 0 1px var(--tc-line);overflow:hidden;padding:0;margin:0;box-sizing:border-box}'
+    + '@media (max-width:780px){.tc-fab{right:16px;bottom:calc(var(--tc-bottom,92px) + env(safe-area-inset-bottom,0px));min-height:52px;padding-right:16px}.tc-fab small{display:none}}'
+    + '.tc-panel{position:fixed;right:18px;bottom:var(--tc-bottom,92px);z-index:calc(var(--tc-z) + 1);width:min(400px,calc(100vw - 36px));height:min(680px,calc(100vh - 36px));height:min(680px,calc(100dvh - 36px));display:none;flex-direction:column;background:var(--tc-paper);border-radius:24px;box-shadow:0 32px 64px -16px rgba(29,12,68,.4),0 0 0 1px var(--tc-line);overflow:hidden;padding:0;margin:0;box-sizing:border-box}'
     + '.tc-panel.is-open{display:flex;animation:tcIn .24s ease}'
     + '@keyframes tcIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}'
     + '@media (max-width:780px){.tc-panel{right:0;bottom:0;left:0;width:100%;height:100%;height:100dvh;border-radius:0}}'
@@ -89,6 +91,7 @@
   /* ── DOM ── */
   var root = document.createElement('div');
   root.id = 'tcChatRoot';
+  root.style.setProperty('--tc-bottom', BOTTOM);
   root.innerHTML = ''
     + '<button class="tc-fab" id="tcFab" type="button" aria-haspopup="dialog" aria-controls="tcPanel" aria-expanded="false" aria-label="' + esc(CTA + ' ' + CTA_SUB) + '">'
     + '<span class="tc-avatar" aria-hidden="true">TC</span>'
