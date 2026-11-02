@@ -7,7 +7,7 @@
      <script src="/js/asistente-transcargo.js" defer></script>
 
    Opciones de window.TRANSCARGO_CHAT: api (obligatoria), whatsapp (dígitos con 52), name, privacy (URL del aviso),
-   greeting (saludo), debug (imprime los eventos del dataLayer en consola; también con ?chat_debug=1).
+   cta y ctaSub (las dos líneas del botón flotante), greeting (saludo), debug (imprime los eventos del dataLayer en consola; también con ?chat_debug=1).
 
    Backend: POST {api}/chat (SSE propio: data:{meta|delta|done|error}) y POST {api}/event ({type:"action", action}).
    Eventos al dataLayer: chat_open, chat_start, chat_message, chat_reply, chat_action, chat_error, chat_close
@@ -20,9 +20,11 @@
   var CFG = window.TRANSCARGO_CHAT || {};
   var API = String(CFG.api || '').replace(/\/+$/, '');
   var NAME = CFG.name || 'Asistente de Transcargo';
-  var VERSION = '0.1.0';
+  var VERSION = '0.1.1';
   var WA = String(CFG.whatsapp || '5213121216310').replace(/\D/g, '');
   var PRIVACY_URL = CFG.privacy || '/uso-de-informacion/';
+  var CTA = CFG.cta || '\u00bfTienes dudas?';
+  var CTA_SUB = CFG.ctaSub || 'Preg\u00fantale a nuestro asesor de IA';
   var GREETING = CFG.greeting || 'Hola, soy el asistente de Transcargo. Te explico cómo funciona el seguro de mercancía y te llevo a cotizar tu embarque. ¿Qué mercancía mueves?';
   var START_CHIPS = ['¿Qué cubre?', '¿Cuánto cuesta?', 'Cotizar mi embarque'];
   var MAX_HISTORY = 14;
@@ -88,9 +90,9 @@
   var root = document.createElement('div');
   root.id = 'tcChatRoot';
   root.innerHTML = ''
-    + '<button class="tc-fab" id="tcFab" type="button" aria-haspopup="dialog" aria-controls="tcPanel" aria-expanded="false">'
+    + '<button class="tc-fab" id="tcFab" type="button" aria-haspopup="dialog" aria-controls="tcPanel" aria-expanded="false" aria-label="' + esc(CTA + ' ' + CTA_SUB) + '">'
     + '<span class="tc-avatar" aria-hidden="true">TC</span>'
-    + '<span class="tc-fab-txt">¿Dudas sobre tu seguro?<small>Te respondemos al momento, a cualquier hora</small></span>'
+    + '<span class="tc-fab-txt">' + esc(CTA) + '<small>' + esc(CTA_SUB) + '</small></span>'
     + '</button>'
     + '<div class="tc-panel" id="tcPanel" role="dialog" aria-modal="false" aria-labelledby="tcTitle" aria-hidden="true">'
     + '<header class="tc-head"><span class="tc-avatar" aria-hidden="true">TC</span>'
