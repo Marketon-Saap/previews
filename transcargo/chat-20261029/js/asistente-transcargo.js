@@ -1,18 +1,23 @@
-/* Transcargo · asistente del sitio · widget de chat · v0.1.0 · 2026-10-29 · APTO
-   Clon del widget del chat de la landing de APTO, con el look del sitio de Transcargo (Manrope/Inter, morados) y sin
-   captura de datos: el asistente orienta y entrega al cotizador (#cotizador), al formulario (#contacto) o a WhatsApp.
+/* Transcargo · asistente del sitio · componente de chat · v0.2.1 · 2-nov-2026 · APTO
+   Asistente de ventas en el sitio de Transcargo: explica el seguro de mercancía con la información del plan y lleva
+   a la persona al cotizador (#cotizador), al formulario (#contacto) o a WhatsApp. No pide ni guarda datos personales:
+   el registro del prospecto sigue siendo el del cotizador y el formulario del sitio.
 
    Uso: antes de </body>
      <script>window.TRANSCARGO_CHAT = { api: 'https://HOST-DEL-ASISTENTE', whatsapp: '5213121216310' };</script>
      <script src="/js/asistente-transcargo.js" defer></script>
 
-   Opciones de window.TRANSCARGO_CHAT: api (obligatoria), whatsapp (dígitos con 52), name, privacy (URL del aviso),
-   cta y ctaSub (las dos líneas del botón flotante), bottom (separación desde abajo, por defecto 92px para no
-   encimarse con el botón de WhatsApp del sitio), greeting (saludo), debug (imprime los eventos del dataLayer en consola; también con ?chat_debug=1).
+   Opciones de window.TRANSCARGO_CHAT: api (obligatoria), whatsapp (dígitos con lada de país), cta y ctaSub (las dos
+   líneas del botón flotante), bottom (separación desde abajo; 118px por defecto para quedar encima del botón de
+   WhatsApp del sitio), greeting (saludo), name, privacy (URL del aviso), debug (imprime los eventos del dataLayer
+   en consola; también con ?chat_debug=1).
 
-   Backend: POST {api}/chat (SSE propio: data:{meta|delta|done|error}) y POST {api}/event ({type:"action", action}).
-   Eventos al dataLayer: chat_open, chat_start, chat_message, chat_reply, chat_action, chat_error, chat_close
-   (contrato en el README del Worker). Nunca datos personales. ES2017, sin "?." ni "??". */
+   Estilos: hereda las variables del sitio (--color-brand-*, --font-display, --font-sans) con valores de respaldo.
+   Todo su CSS vive bajo #tcChatRoot y no afecta al resto de la página.
+
+   Servicio: POST {api}/chat (SSE propio: data:{meta|delta|done|error}) y POST {api}/event ({type:"action", action}).
+   Eventos al dataLayer: chat_open, chat_start, chat_message, chat_reply, chat_action, chat_error, chat_close.
+   Nunca manda datos personales. JavaScript ES2017, sin dependencias. */
 (function () {
   'use strict';
   if (window.__tcChatLoaded) return;
