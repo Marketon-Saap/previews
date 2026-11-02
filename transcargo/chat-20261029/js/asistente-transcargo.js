@@ -21,10 +21,12 @@
   var CFG = window.TRANSCARGO_CHAT || {};
   var API = String(CFG.api || '').replace(/\/+$/, '');
   var NAME = CFG.name || 'Asistente de Transcargo';
-  var VERSION = '0.2.0';
+  var VERSION = '0.2.1';
   var WA = String(CFG.whatsapp || '5213121216310').replace(/\D/g, '');
   var PRIVACY_URL = CFG.privacy || '/uso-de-informacion/';
-  var BOTTOM = CFG.bottom || '92px';   // el sitio tiene su botón de WhatsApp abajo a la derecha: el chat va encima
+  // El sitio tiene su propio botón de WhatsApp abajo a la derecha (80x80 px, a 24 px del borde: ocupa hasta 104 px).
+  // El del chat va encima, con 14 px de aire. Si el sitio mueve el suyo, se ajusta con CFG.bottom.
+  var BOTTOM = CFG.bottom || '118px';
   var CTA = CFG.cta || '\u00bfTienes dudas?';
   var CTA_SUB = CFG.ctaSub || 'Preg\u00fantale a nuestro asesor de IA';
   var GREETING = CFG.greeting || 'Hola, soy el asistente de Transcargo. Te explico cómo funciona el seguro de mercancía y te llevo a cotizar tu embarque. ¿Qué mercancía mueves?';
@@ -50,20 +52,20 @@
     + '#tcChatRoot *,#tcChatRoot *::before,#tcChatRoot *::after{box-sizing:border-box}'
 
     /* botón flotante: píldora de 99px como los CTA del sitio */
-    + '.tc-fab{position:fixed;right:18px;bottom:var(--tc-bottom,92px);z-index:var(--tc-z);display:inline-flex;align-items:center;gap:10px;min-height:56px;padding:7px 22px 7px 7px;border:0;border-radius:99px;background:var(--tc-deep);color:#fff;font-family:var(--tc-display);cursor:pointer;box-shadow:0 10px 30px -8px rgba(29,12,68,.45);transition:background .2s ease,transform .2s ease;text-align:left}'
+    + '.tc-fab{position:fixed;right:24px;bottom:var(--tc-bottom,118px);z-index:var(--tc-z);display:inline-flex;align-items:center;gap:10px;min-height:56px;padding:7px 22px 7px 7px;border:0;border-radius:99px;background:var(--tc-deep);color:#fff;font-family:var(--tc-display);cursor:pointer;box-shadow:0 10px 30px -8px rgba(29,12,68,.45);transition:background .2s ease,transform .2s ease;text-align:left}'
     + '.tc-fab:hover{background:var(--tc-purple);transform:translateY(-1px)}'
     + '.tc-fab:focus-visible{outline:3px solid var(--tc-purple);outline-offset:3px}'
     + '.tc-fab-txt{display:flex;flex-direction:column;gap:2px;line-height:1.15}'
     + '.tc-fab-txt b{font-weight:700;font-size:15px}'
     + '.tc-fab-txt small{font-weight:400;font-size:12.5px;color:var(--tc-line)}'
     + 'body.tc-open .tc-fab{opacity:0;pointer-events:none}'
-    + '@media (max-width:780px){.tc-fab{right:16px;bottom:calc(var(--tc-bottom,92px) + env(safe-area-inset-bottom,0px));min-height:52px;padding-right:18px}.tc-fab-txt small{display:none}}'
+    + '@media (max-width:780px){.tc-fab{right:16px;bottom:calc(var(--tc-bottom,118px) + env(safe-area-inset-bottom,0px));min-height:52px;padding-right:18px}.tc-fab-txt small{display:none}}'
 
     /* avatar */
     + '.tc-avatar{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:var(--tc-purple);color:#fff;font-family:var(--tc-display);font-weight:800;font-size:13px;letter-spacing:.06em;flex:0 0 42px}'
 
     /* panel */
-    + '.tc-panel{position:fixed;right:18px;bottom:var(--tc-bottom,92px);z-index:calc(var(--tc-z) + 1);width:min(408px,calc(100vw - 36px));height:min(640px,calc(100dvh - 132px));display:none;flex-direction:column;background:var(--tc-surface);border-radius:24px;box-shadow:0 28px 60px -18px rgba(29,12,68,.38),0 0 0 1px var(--tc-line);overflow:hidden}'
+    + '.tc-panel{position:fixed;right:24px;bottom:var(--tc-bottom,118px);z-index:calc(var(--tc-z) + 1);width:min(408px,calc(100vw - 48px));height:min(640px,calc(100dvh - var(--tc-bottom,118px) - 36px));display:none;flex-direction:column;background:var(--tc-surface);border-radius:24px;box-shadow:0 28px 60px -18px rgba(29,12,68,.38),0 0 0 1px var(--tc-line);overflow:hidden}'
     + '.tc-panel.is-open{display:flex;animation:tcIn .22s cubic-bezier(.4,0,.2,1)}'
     + '@keyframes tcIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}'
     + '@media (max-width:780px){.tc-panel{right:0;bottom:0;left:0;width:100%;height:100dvh;border-radius:0}}'
@@ -119,7 +121,7 @@
     + '.tc-foot a{color:var(--tc-soft);text-decoration:underline;text-underline-offset:2px}'
 
     /* aviso flotante */
-    + '.tc-toast{position:fixed;left:50%;bottom:calc(var(--tc-bottom,92px) + 64px);transform:translateX(-50%);z-index:calc(var(--tc-z) + 3);background:var(--tc-deep);color:#fff;padding:11px 18px;border-radius:99px;font-family:var(--tc-display);font-weight:600;font-size:13px;line-height:1.3;opacity:0;pointer-events:none;transition:opacity .2s;max-width:calc(100vw - 32px);text-align:center}'
+    + '.tc-toast{position:fixed;left:50%;bottom:calc(var(--tc-bottom,118px) + 64px);transform:translateX(-50%);z-index:calc(var(--tc-z) + 3);background:var(--tc-deep);color:#fff;padding:11px 18px;border-radius:99px;font-family:var(--tc-display);font-weight:600;font-size:13px;line-height:1.3;opacity:0;pointer-events:none;transition:opacity .2s;max-width:calc(100vw - 32px);text-align:center}'
     + '.tc-toast.is-on{opacity:1}';
   var style = document.createElement('style');
   style.id = 'tcChatStyles';
